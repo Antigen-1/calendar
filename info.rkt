@@ -7,3 +7,4 @@
 (define version "0.0")
 (define pkg-authors '(zhanghao))
 (define license '(Apache-2.0 OR MIT))
+(define raco-commands (list (list "calendar" '(submod calendar main) "My calendar app" #f)))
