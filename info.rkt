@@ -1,9 +1,9 @@
 #lang info
 (define collection "calendar")
-(define deps '("base"))
+(define deps '("base" "git://github.com/Antigen-1/hasket.git"))
 (define build-deps '("scribble-lib" "racket-doc" "rackunit-lib"))
 (define scribblings '(("scribblings/calendar.scrbl" ())))
-(define pkg-desc "Description Here")
+(define pkg-desc "My Calendar App")
 (define version "0.0")
 (define pkg-authors '(zhanghao))
 (define license '(Apache-2.0 OR MIT))
