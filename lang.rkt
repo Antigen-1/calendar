@@ -4,7 +4,8 @@
          racket/runtime-path racket/date racket/draw racket/class racket/contract
          "filter.rkt" "notify.rkt")
 (provide begin lambda define #%module-begin #%app
-         (rename-out (my-quote quote))
+         (rename-out (my-quote quote)
+                     (my-datum #%datum))
          disjoin conjoin
          (contract-out (notify
                         (->* ((-> date? boolean?) string?)
@@ -35,6 +36,8 @@
    #'(date-filter->predicate (symbol->date-filter 'v)))
   ((_ v:literal)
    #'(quote v)))
+(define-syntax-parse-rule (my-datum . v)
+  (my-quote v))
 
 ;; Notifier
 #; (->* ((-> date? boolean?) string?)
