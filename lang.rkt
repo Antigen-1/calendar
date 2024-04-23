@@ -1,7 +1,7 @@
 #lang racket/base
 (require (for-syntax racket/base)
          syntax/parse/define
-         racket/runtime-path racket/date racket/draw racket/class racket/contract
+         racket/runtime-path racket/date racket/draw racket/contract
          "filter.rkt" "notify.rkt")
 (provide begin lambda define #%module-begin #%app
          (rename-out (my-quote quote)
@@ -16,11 +16,11 @@
                              any))))
 
 ;; Runtime Resources
-(define-runtime-path svg "racket-logo.svg")
+(define-runtime-path svg "racket-logo.jpeg")
 
 ;; Constants
 (define interval (* 24 60 60 1000))
-(define icon (make-object bitmap% svg))
+(define icon (read-bitmap svg))
 
 ;; Syntax classes
 (begin-for-syntax
