@@ -26,4 +26,5 @@
     #:args ()
     (define/contract path string? (unbox where))
     (parameterize ((current-namespace (module->namespace lang (namespace-anchor->empty-namespace anchor))))
-      (load path))))
+      (with-handlers ((exn:break? void))
+        (load path)))))
