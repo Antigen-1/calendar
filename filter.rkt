@@ -1,7 +1,9 @@
 #lang hasket
-(require racket/match racket/string racket/contract)
+(require racket/match racket/string racket/contract "function.rkt")
 (provide (contract-out (date-filter->predicate (-> date-filter? (-> date? any)))
-                       (symbol->date-filter (-> symbol? any)))
+                       (symbol->date-filter (-> symbol? any))
+                       (disjoin filter-conbinator/c)
+                       (conjoin filter-conbinator/c))
          date-filter?)
 
 (define-datatype date-filter date-filter?
@@ -51,6 +53,18 @@
 (define (symbol->date-filter s)
   (string->date-filter (symbol->string s)))
 
+;; Contracts
+(define filter-conbinator/c (->* () () #:rest (listof (-> date? boolean?)) any))
+
+;; Filter combinators
+#; filter-conbinator/c
+(define (disjoin . ps)
+  (apply disjoin1 ps))
+#; filter-conbinator/c
+(define(conjoin . ps)
+  (apply conjoin1 ps))
+
+
 (module+ test
   (require rackunit racket/date)
   (check-true (date-filter? (symbol->date-filter '6wd)))
@@ -61,9 +75,13 @@
   (check-exn exn:fail:contract? (lambda () (symbol->date-filter 'w)))
   (check-true
    (let ((date (current-date)))
-     (ormap (lambda (s) (((compose1 date-filter->predicate symbol->date-filter) s) date))
-            (list '0wd '1wd '2wd '3wd '4wd '5wd '6wd))))
+     ((apply disjoin
+             (map (compose1 date-filter->predicate symbol->date-filter)
+                  (list '0wd '1wd '2wd '3wd '4wd '5wd '6wd)))
+      date)))
   (check-false
    (let ((date (current-date)))
-     (andmap (lambda (s) (((compose1 date-filter->predicate symbol->date-filter) s) date))
-             (list '1m '2m '3m '4m '5m '6m '7m '8m '9m '10m '11m '12m)))))
+     ((apply conjoin
+             (map (compose1 date-filter->predicate symbol->date-filter)
+                  (list '1m '2m '3m '4m '5m '6m '7m '8m '9m '10m '11m '12m)))
+      date))))

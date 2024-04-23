@@ -1,38 +1,12 @@
 #lang racket/base
+(require racket/runtime-path)
 
-(module+ test
-  (require rackunit))
+(define-runtime-module-path-index lang "lang.rkt")
 
-;; Notice
-;; To install (from within the package directory):
-;;   $ raco pkg install
-;; To install (once uploaded to pkgs.racket-lang.org):
-;;   $ raco pkg install <<name>>
-;; To uninstall:
-;;   $ raco pkg remove <<name>>
-;; To view documentation:
-;;   $ raco docs <<name>>
-;;
-;; For your convenience, we have included LICENSE-MIT and LICENSE-APACHE files.
-;; If you would prefer to use a different license, replace those files with the
-;; desired license.
-;;
-;; Some users like to add a `private/` directory, place auxiliary files there,
-;; and require them in `main.rkt`.
-;;
-;; See the current version of the racket style guide here:
-;; http://docs.racket-lang.org/style/index.html
-
-;; Code here
-
-
-
-(module+ test
-  ;; Any code in this `test` submodule runs when this file is run using DrRacket
-  ;; or with `raco test`. The code here does not run when this file is
-  ;; required by another module.
-
-  (check-equal? (+ 2 2) 4))
+(module namespace racket/base
+  (require "lang.rkt")
+  (provide anchor)
+  (define-namespace-anchor anchor))
 
 (module+ main
   ;; (Optional) main submodule. Put code here if you need it to be executed when
@@ -40,11 +14,16 @@
   ;; does not run when this file is required by another module. Documentation:
   ;; http://docs.racket-lang.org/guide/Module_Syntax.html#%28part._main-and-test%29
 
-  (require racket/cmdline)
-  (define who (box "world"))
+  (require racket/cmdline racket/contract
+           raco/command-name
+           (submod ".." namespace))
+
+  (define where (box #f))
   (command-line
-    #:program "my-program"
+    #:program (short-program+command-name)
     #:once-each
-    [("-n" "--name") name "Who to say hello to" (set-box! who name)]
+    [("-p" "--path") path "Specify the script" (set-box! where path)]
     #:args ()
-    (printf "hello ~a~n" (unbox who))))
+    (define/contract path string? (unbox where))
+    (parameterize ((current-namespace (module->namespace lang (namespace-anchor->empty-namespace anchor))))
+      (load path))))

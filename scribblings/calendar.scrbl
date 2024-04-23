@@ -7,4 +7,4 @@
 
 @defmodule[calendar]
 
-Package Description Here
+My calendar app in cli mode.

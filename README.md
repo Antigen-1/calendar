@@ -1,3 +1,3 @@
 calendar
 ========
-README text here.
+My calendar app in cli mode.

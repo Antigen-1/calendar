@@ -1,6 +1,6 @@
 #lang info
 (define collection "calendar")
-(define deps '("base" "git://github.com/Antigen-1/hasket.git"))
+(define deps '("base" "git://github.com/Antigen-1/hasket.git" "libnotify"))
 (define build-deps '("scribble-lib" "racket-doc" "rackunit-lib"))
 (define scribblings '(("scribblings/calendar.scrbl" ())))
 (define pkg-desc "My Calendar App")
