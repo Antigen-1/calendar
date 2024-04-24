@@ -1,7 +1,8 @@
 #lang racket/base
-(require racket/runtime-path)
+(require racket/runtime-path (for-syntax racket/base))
 
 (define-runtime-module-path-index lang "lang.rkt")
+(define-runtime-module-path-index server '(submod "lang.rkt" server))
 
 (module namespace racket/base
   (require "lang.rkt")
@@ -16,7 +17,8 @@
 
   (require racket/cmdline racket/contract
            raco/command-name
-           (submod ".." namespace))
+           (submod ".." namespace)
+           "namespace.rkt")
 
   (define where (box #f))
   (command-line
@@ -25,6 +27,9 @@
     [("-p" "--path") path "Specify the script" (set-box! where path)]
     #:args ()
     (define/contract path string? (unbox where))
-    (parameterize ((current-namespace (module->namespace lang (namespace-anchor->empty-namespace anchor))))
-      (with-handlers ((exn:break? void))
-        (load path)))))
+    (with-handlers ((exn:break? void))
+      (define ns (make-base-empty-namespace))
+      (namespace-require/full lang (namespace-anchor->empty-namespace anchor) ns)
+      (parameterize ((current-namespace ns))
+        (load path)
+        (thread-wait (dynamic-require server 'server-thread))))))
