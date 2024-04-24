@@ -101,7 +101,7 @@
 
   ;; This procedure must be called after notifiers are created and registered
   ;; Create a thread that listens to all notifier threads
-  (define (make-server-thread)
+  (define (make-server-thread once?)
     (thread
      (lambda ()
        (define records (get-records))
@@ -111,6 +111,8 @@
                       (dt (current-date)))
              (map (lambda (rc) (call/excetion-logger (lambda () (maybe-apply-record notifier rc dt))))
                   records)
-             (sync (handle-evt (alarm-evt (+ ms interval))
+             (sync (handle-evt (if once? never-evt (alarm-evt (+ ms interval)))
                                (lambda (_)
-                                 (loop (current-milliseconds) (current-date)))))))))))
+                                 (loop (current-milliseconds) (current-date))))
+                   (handle-evt (if once? always-evt never-evt)
+                               void))))))))

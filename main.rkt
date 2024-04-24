@@ -2,7 +2,6 @@
 (require racket/runtime-path (for-syntax racket/base))
 
 (define-runtime-module-path-index lang "lang.rkt")
-(define-runtime-module-path-index server '(submod "lang.rkt" server))
 
 (module namespace racket/base
   (require "lang.rkt")
@@ -18,18 +17,22 @@
   (require racket/cmdline racket/contract
            raco/command-name
            (submod ".." namespace)
+           (submod "lang.rkt" server)
            "namespace.rkt")
 
   (define where (box null))
+  (define once? (box #f))
   (command-line
-    #:program (short-program+command-name)
-    #:multi
-    [("-p" "--path") path "Specify the script" (set-box! where (cons path (unbox where)))]
-    #:args ()
-    (define/contract paths (listof path-string?) (reverse (unbox where)))
-    (with-handlers ((exn:break? void))
-      (define ns (make-base-empty-namespace))
-      (namespace-require/full lang (namespace-anchor->empty-namespace anchor) ns)
-      (parameterize ((current-namespace ns))
-        (map load paths)
-        (sync (handle-evt ((dynamic-require server 'make-server-thread)) void))))))
+   #:program (short-program+command-name)
+   #:once-each
+   [("-o" "--once") "Run the script once" (set-box! once? #t)]
+   #:multi
+   [("-p" "--path") path "Specify the script" (set-box! where (cons path (unbox where)))]
+   #:args ()
+   (define/contract paths (listof path-string?) (reverse (unbox where)))
+   (with-handlers ((exn:break? void))
+     (define ns (make-base-empty-namespace))
+     (namespace-require/full lang (namespace-anchor->empty-namespace anchor) ns)
+     (parameterize ((current-namespace ns))
+       (map load paths)
+       (sync (handle-evt (make-server-thread (unbox once?)) void))))))
