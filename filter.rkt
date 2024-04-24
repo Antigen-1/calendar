@@ -7,15 +7,11 @@
          date-filter?)
 
 (define-datatype date-filter date-filter?
-  (week-day (day (lambda (v) (and (exact-nonnegative-integer? v)
-                                  (<= v 6)))))
-  (year-day (day (lambda (v)
-                   (and (exact-nonnegative-integer? v)
-                        (<= v 365)))))
-  ;; Tomohiko-Sakamoto algorithm is used
-  (year (number (lambda (v) (and (exact-integer? v) (>= v 1583)))))
-  (month (number (lambda (v) (and (exact-positive-integer? v) (<= v 12)))))
-  (day (number (lambda (v) (and (exact-positive-integer? v) (<= v 31)))))
+  (week-day (day (integer-in 0 6)))
+  (year-day (day (integer-in 0 365)))
+  (year (number exact-integer?))
+  (month (number (integer-in 1 12)))
+  (day (number (integer-in 1 31)))
   )
 
 ;; Map date filter structures to predicates
