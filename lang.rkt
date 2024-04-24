@@ -88,11 +88,10 @@
      loop)))
 
 (module+ server
-  (provide server-thread)
-  ;; This module must be instantiated after all notifier threads are created and registered
+  (provide make-server-thread)
 
-  ;; A thread that listens to all notifier threads
-  (define server-thread
+  ;; Create a thread that listens to all notifier threads
+  (define (make-server-thread)
     (thread
      (lambda ()
        (let loop ((threads (get-threads)))

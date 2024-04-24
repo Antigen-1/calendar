@@ -32,4 +32,4 @@
       (namespace-require/full lang (namespace-anchor->empty-namespace anchor) ns)
       (parameterize ((current-namespace ns))
         (load path)
-        (thread-wait (dynamic-require server 'server-thread))))))
+        (sync (handle-evt ((dynamic-require server 'make-server-thread)) void))))))
