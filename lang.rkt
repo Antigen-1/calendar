@@ -1,13 +1,13 @@
 #lang racket/base
 (require (for-syntax racket/base)
          syntax/parse/define
-         racket/runtime-path racket/date racket/draw racket/contract racket/exn racket/async-channel
+         racket/runtime-path racket/date racket/draw racket/contract racket/dict
          "filter.rkt" "notify.rkt")
 (provide begin lambda define #%top-interaction #%app
          (rename-out (my-quote quote)
                      (my-datum #%datum))
          disjoin conjoin
-         (contract-out (notify
+         (contract-out (send!
                         (->* ((-> date? boolean?) string?)
                              (#:body (or/c string? #f)
                               #:timeout (or/c #f (>=/c 0))
@@ -22,20 +22,28 @@
 (define interval (* 24 60 60 1000))
 (define icon (read-bitmap svg))
 
-;; Loggers
-(define exception-logger (make-logger #f (current-logger)))
+;; Records
+#; (list/c (-> date? boolean?) string? (or/c string? #f) (or/c #f (>=/c 0)) (or/c "low" "normal" "critical") (or/c string? #f))
+;;------------------------------------------
+;; Apply the notifier to the record and date
+#; (-> <Notifier> <Record> date? any)
+(define (maybe-apply-record notify record date)
+  (if ((car record) date)
+      (keyword-apply/dict notify (map cons '(#:summary #:body #:timeout #:urgency #:category) (cdr record)) null)
+      (void)))
 
-;; Thread registry
-#; (-> thread? any)
-#; (-> (listof thread?))
+;; Record registry
+#; (-> <Record> any)
+#; (-> (listof <Record>))
 (define-values
-  (add-thread! get-threads)
-  (let ((ch (make-async-channel)))
+  (add-record! get-records)
+  (let ((bx (box null)))
     (values
-     (lambda (th) (async-channel-put ch th))
+     (lambda (rc)
+       (set-box! bx (cons rc (unbox bx))))
      (lambda ()
-       (for/list ((th (in-producer (lambda () (sync/timeout 0 ch)) #f)))
-         th)))))
+       (reverse (unbox bx))))))
+;;------------------------------------------
 
 ;; Syntax classes
 (begin-for-syntax
@@ -54,45 +62,55 @@
 (define-syntax-parse-rule (my-datum . v)
   (my-quote v))
 
-;; Notifier
+;; Notifiers
+#; (->* (#:summary string?)
+        (#:body (or/c string? #f)
+         #:timeout (or/c #f (>=/c 0))
+         #:urgency (or/c "low" "normal" "critical")
+         #:category (or/c string? #f))
+        any)
+(define notifier (make-notifier #:icon icon))
+
+;; Client
 #; (->* ((-> date? boolean?) string?)
         (#:body (or/c string? #f)
          #:timeout (or/c #f (>=/c 0))
          #:urgency (or/c "low" "normal" "critical")
          #:category (or/c string? #f))
         any)
-(define (notify f
-                s
-                #:body (b #f)
-                #:timeout (t #f)
-                #:urgency (u "normal")
-                #:category (c #f))
-  ((compose1 add-thread! thread)
-   (letrec ((loop
-             (lambda ((ms (current-milliseconds)))
-               (with-handlers ((exn:fail? (lambda (e)
-                                            (log-message
-                                             exception-logger
-                                             'error
-                                             'Exception
-                                             (exn->string e)))))
-                 (cond ((f (current-date))
-                        ((make-notifier #:icon icon)
-                         #:summary s
-                         #:body b
-                         #:timeout t
-                         #:urgency u
-                         #:category c)))
-                 (sync (handle-evt (alarm-evt (+ ms interval))
-                                   (lambda (_) (loop (current-milliseconds)))))))))
-     loop)))
+(define (send! f
+               s
+               #:body (b #f)
+               #:timeout (t #f)
+               #:urgency (u "normal")
+               #:category (c #f))
+  (add-record! (list f s b t u c)))
 
 (module+ server
+  (require racket/exn)
   (provide make-server-thread)
 
+  ;; Loggers
+  (define exception-logger (make-logger #f (current-logger)))
+
+  ;; Auxiliary functions
+  #; (-> (-> any) any)
+  (define (call/excetion-logger proc)
+    (with-handlers ((exn:fail? (lambda (e) (log-message exception-logger 'error 'Exception (exn->string e)))))
+      (proc)))
+
+  ;; This procedure must be called after notifiers are created and registered
   ;; Create a thread that listens to all notifier threads
   (define (make-server-thread)
     (thread
      (lambda ()
-       (let loop ((threads (get-threads)))
-         (if (null? threads) (void) (loop (remove (apply sync threads) threads eq?))))))))
+       (define records (get-records))
+       (if (null? records)
+           (void)
+           (let loop ((ms (current-milliseconds))
+                      (dt (current-date)))
+             (map (lambda (rc) (call/excetion-logger (lambda () (maybe-apply-record notifier rc dt))))
+                  records)
+             (sync (handle-evt (alarm-evt (+ ms interval))
+                               (lambda (_)
+                                 (loop (current-milliseconds) (current-date)))))))))))

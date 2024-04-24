@@ -20,16 +20,16 @@
            (submod ".." namespace)
            "namespace.rkt")
 
-  (define where (box #f))
+  (define where (box null))
   (command-line
     #:program (short-program+command-name)
-    #:once-each
-    [("-p" "--path") path "Specify the script" (set-box! where path)]
+    #:multi
+    [("-p" "--path") path "Specify the script" (set-box! where (cons path (unbox where)))]
     #:args ()
-    (define/contract path string? (unbox where))
+    (define/contract paths (listof path-string?) (reverse (unbox where)))
     (with-handlers ((exn:break? void))
       (define ns (make-base-empty-namespace))
       (namespace-require/full lang (namespace-anchor->empty-namespace anchor) ns)
       (parameterize ((current-namespace ns))
-        (load path)
+        (map load paths)
         (sync (handle-evt ((dynamic-require server 'make-server-thread)) void))))))
