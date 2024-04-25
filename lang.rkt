@@ -38,17 +38,13 @@
 #; (-> (listof <Record>))
 (define-values
   (add-record! get-records)
-  (let ((bx (box null))
-        (sema (make-semaphore 1)))
+  (let ((cell (make-thread-cell null)))
+    ;; Avoid concurrency problems
     (values
      (lambda (rc)
-       (call-with-semaphore
-        sema
-        (lambda () (set-box! bx (cons rc (unbox bx))))))
+       (thread-cell-set! cell (cons rc (thread-cell-ref cell))))
      (lambda ()
-       (call-with-semaphore
-        sema
-        (lambda () (reverse (unbox bx))))))))
+       (reverse (thread-cell-ref cell))))))
 ;;------------------------------------------
 
 ;; Syntax classes
@@ -105,7 +101,7 @@
 
 (module+ server
   (require racket/exn)
-  (provide make-server-thread)
+  (provide make-server)
 
   ;; Loggers
   (define exception-logger (make-logger #f (current-logger)))
@@ -116,20 +112,18 @@
     (with-handlers ((exn:fail? (lambda (e) (log-message exception-logger 'error 'Exception (exn->string e)))))
       (proc)))
 
-  ;; This procedure must be called after notifiers are created and registered
-  ;; Create a thread that listens to all notifier threads
-  (define (make-server-thread once?)
-    (thread
-     (lambda ()
-       (define records (get-records))
-       (if (null? records)
-           (void)
-           (let loop ((ms (current-milliseconds))
-                      (dt (current-date)))
-             (map (lambda (rc) (call/excetion-logger (lambda () (maybe-apply-record notifier rc dt))))
-                  records)
-             (sync (handle-evt (if once? never-evt (alarm-evt (+ ms interval)))
-                               (lambda (_)
-                                 (loop (current-milliseconds) (current-date))))
-                   (handle-evt (if once? always-evt never-evt)
-                               void))))))))
+  ;; This procedure must be called in the current thread after records are created and registered
+  ;; Call the notifier with all records
+  (define (make-server once?)
+    (define records (get-records))
+    (if (null? records)
+        (void)
+        (let loop ((ms (current-milliseconds))
+                   (dt (current-date)))
+          (map (lambda (rc) (call/excetion-logger (lambda () (maybe-apply-record notifier rc dt))))
+               records)
+          (sync (handle-evt (if once? never-evt (alarm-evt (+ ms interval)))
+                            (lambda (_)
+                              (loop (current-milliseconds) (current-date))))
+                (handle-evt (if once? always-evt never-evt)
+                            void))))))

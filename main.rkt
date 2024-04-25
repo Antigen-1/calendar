@@ -26,4 +26,4 @@
    (define/contract paths (listof path-string?) (reverse (unbox where)))
    (with-handlers ((exn:break? void))
      (map (lambda (p) (dynamic-require p #f)) paths)
-     (sync (handle-evt (make-server-thread (unbox once?)) void)))))
+     (make-server (unbox once?)))))
