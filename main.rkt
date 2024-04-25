@@ -25,5 +25,5 @@
    #:args ()
    (define/contract paths (listof path-string?) (reverse (unbox where)))
    (with-handlers ((exn:break? void))
-     (map (lambda (p) (dynamic-require p #f)) paths)
+     (map (lambda (p) (dynamic-require (list 'file p) #f)) paths)
      (make-server (unbox once?)))))
