@@ -25,9 +25,9 @@
   (require rackunit)
   (check-equal?
    (parameterize ((current-readtable $-readtable))
-     (read (open-input-string "$@4m|abcd$")))
-   '(_filter (_unit "4m") (_operator OR) (_unit abcd)))
-  (let ((port (open-input-string "abcd$4m|abcd$")))
+     (read (open-input-string "$!@4m|!!abcd;")))
+   '(_filter (_operator1 NOT) (_unit "4m") (_operator2 OR) (_operator1 NOT) (_operator1 NOT) (_unit abcd)))
+  (let ((port (open-input-string "abcd$@4m|abcd;")))
     (parameterize ((current-readtable $-readtable))
       (read-string 4 port)
       (define stx (read-syntax 'port port))

@@ -2,8 +2,9 @@
 (require racket/match racket/string racket/contract "function.rkt")
 (provide (contract-out (date-filter->predicate (-> date-filter? (-> date? any)))
                        (string->date-filter (-> string? any))
-                       (disjoin filter-conbinator/c)
-                       (conjoin filter-conbinator/c))
+                       (rename disjoin filter-disjoin filter-conbinator/c)
+                       (rename conjoin filter-conjoin filter-conbinator/c)
+                       (rename negate filter-negate filter-mapper/c))
          date-filter?)
 
 (define-datatype date-filter date-filter?
@@ -47,16 +48,19 @@
                (current-continuation-marks))))))
 
 ;; Contracts
-(define filter-conbinator/c (->* () () #:rest (listof (-> date? boolean?)) any))
+(define filter-conbinator/c (-> (-> date? boolean?) (-> date? boolean?) any))
+(define filter-mapper/c (-> (-> date? boolean?) any))
 
 ;; Filter combinators
 #; filter-conbinator/c
-(define (disjoin . ps)
-  (apply disjoin1 ps))
+(define (disjoin p1 p2)
+  (disjoin1 p1 p2))
 #; filter-conbinator/c
-(define(conjoin . ps)
-  (apply conjoin1 ps))
-
+(define (conjoin p1 p2)
+  (conjoin1 p1 p2))
+#; filter-mapper/c
+(define (negate p)
+  (negate1 p))
 
 (module+ test
   (require rackunit racket/date)
@@ -68,13 +72,17 @@
   (check-exn exn:fail:contract? (lambda () (string->date-filter "w")))
   (check-true
    (let ((date (current-date)))
-     ((apply disjoin
-             (map (compose1 date-filter->predicate string->date-filter symbol->string)
-                  (list '0wd '1wd '2wd '3wd '4wd '5wd '6wd)))
+     ((foldl
+       disjoin
+       (const1 #f)
+       (map (compose1 date-filter->predicate string->date-filter symbol->string)
+            (list '0wd '1wd '2wd '3wd '4wd '5wd '6wd)))
       date)))
   (check-false
    (let ((date (current-date)))
-     ((apply conjoin
-             (map (compose1 date-filter->predicate string->date-filter symbol->string)
-                  (list '1m '2m '3m '4m '5m '6m '7m '8m '9m '10m '11m '12m)))
+     ((foldl
+       conjoin
+       (const1 #t)
+       (map (compose1 date-filter->predicate string->date-filter symbol->string)
+            (list '1m '2m '3m '4m '5m '6m '7m '8m '9m '10m '11m '12m)))
       date))))

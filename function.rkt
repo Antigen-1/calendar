@@ -1,5 +1,5 @@
 #lang racket/base
-(provide const1 disjoin1 conjoin1)
+(provide const1 disjoin1 conjoin1 negate1)
 
 ;; Simplified const function
 #; (-> any/c (-> any/c any/c))
@@ -25,3 +25,7 @@
         (if (null? rest)
             first
             (lambda (v) (and (first v) ((apply disjoin1 rest) v)))))))
+;; Simplified negate function
+#; (-> predicate/c predicate/c)
+(define (negate1 p)
+  (lambda (v) (not (p v))))
