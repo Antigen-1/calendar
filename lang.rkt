@@ -2,11 +2,12 @@
 (require (for-syntax racket/base)
          syntax/parse/define
          racket/runtime-path racket/date racket/draw racket/contract racket/dict
-         "filter.rkt" "notify.rkt")
+         "filter.rkt" "notify.rkt" "readtable.rkt")
 (provide (all-from-out racket/base)
          (rename-out (#%filter _filter)
                      (#%operator _operator)
                      (#%unit _unit))
+         $-readtable
          (contract-out (send!
                         (->* ((-> date? boolean?) string?)
                              (#:body (or/c string? #f)
