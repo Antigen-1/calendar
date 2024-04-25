@@ -38,12 +38,17 @@
 #; (-> (listof <Record>))
 (define-values
   (add-record! get-records)
-  (let ((bx (box null)))
+  (let ((bx (box null))
+        (sema (make-semaphore 1)))
     (values
      (lambda (rc)
-       (set-box! bx (cons rc (unbox bx))))
+       (call-with-semaphore
+        sema
+        (lambda () (set-box! bx (cons rc (unbox bx))))))
      (lambda ()
-       (reverse (unbox bx))))))
+       (call-with-semaphore
+        sema
+        (lambda () (reverse (unbox bx))))))))
 ;;------------------------------------------
 
 ;; Syntax classes
