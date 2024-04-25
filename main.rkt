@@ -1,7 +1,7 @@
 #lang racket/base
 (module reader syntax/module-reader calendar/lang
         #:read (lambda ((in (current-input-port))) (parameterize ((current-readtable $-readtable)) (read in)))
-        #:read-syntax (lambda ((in (current-input-port))) (parameterize ((current-readtable $-readtable)) (read-syntax in)))
+        #:read-syntax (lambda ((name #f) (in (current-input-port))) (parameterize ((current-readtable $-readtable)) (read-syntax name in)))
         (require "readtable.rkt"))
 
 (module+ main
