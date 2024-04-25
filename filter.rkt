@@ -1,7 +1,7 @@
 #lang hasket
 (require racket/match racket/string racket/contract "function.rkt")
 (provide (contract-out (date-filter->predicate (-> date-filter? (-> date? any)))
-                       (symbol->date-filter (-> symbol? any))
+                       (string->date-filter (-> string? any))
                        (disjoin filter-conbinator/c)
                        (conjoin filter-conbinator/c))
          date-filter?)
@@ -45,9 +45,6 @@
                        pattern
                        str)
                (current-continuation-marks))))))
-#; (-> symbol? date-filter?)
-(define (symbol->date-filter s)
-  (string->date-filter (symbol->string s)))
 
 ;; Contracts
 (define filter-conbinator/c (->* () () #:rest (listof (-> date? boolean?)) any))
@@ -63,21 +60,21 @@
 
 (module+ test
   (require rackunit racket/date)
-  (check-true (date-filter? (symbol->date-filter '6wd)))
-  (check-true (date-filter? (symbol->date-filter '10yd)))
-  (check-true (date-filter? (symbol->date-filter '2024y)))
-  (check-true (date-filter? (symbol->date-filter '10m)))
-  (check-true (date-filter? (symbol->date-filter '10d)))
-  (check-exn exn:fail:contract? (lambda () (symbol->date-filter 'w)))
+  (check-true (date-filter? (string->date-filter "6wd")))
+  (check-true (date-filter? (string->date-filter "10yd")))
+  (check-true (date-filter? (string->date-filter "2024y")))
+  (check-true (date-filter? (string->date-filter "10m")))
+  (check-true (date-filter? (string->date-filter "10d")))
+  (check-exn exn:fail:contract? (lambda () (string->date-filter "w")))
   (check-true
    (let ((date (current-date)))
      ((apply disjoin
-             (map (compose1 date-filter->predicate symbol->date-filter)
+             (map (compose1 date-filter->predicate string->date-filter symbol->string)
                   (list '0wd '1wd '2wd '3wd '4wd '5wd '6wd)))
       date)))
   (check-false
    (let ((date (current-date)))
      ((apply conjoin
-             (map (compose1 date-filter->predicate symbol->date-filter)
+             (map (compose1 date-filter->predicate string->date-filter symbol->string)
                   (list '1m '2m '3m '4m '5m '6m '7m '8m '9m '10m '11m '12m)))
       date))))

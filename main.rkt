@@ -1,12 +1,8 @@
 #lang racket/base
-(require racket/runtime-path (for-syntax racket/base))
-
-(define-runtime-module-path-index lang "lang.rkt")
-
-(module namespace racket/base
-  (require "lang.rkt")
-  (provide anchor)
-  (define-namespace-anchor anchor))
+(module reader syntax/module-reader calendar/lang
+        #:read (lambda ((in (current-input-port))) (parameterize ((current-readtable $-readtable)) (read in)))
+        #:read-syntax (lambda ((in (current-input-port))) (parameterize ((current-readtable $-readtable)) (read-syntax in)))
+        (require "readtable.rkt"))
 
 (module+ main
   ;; (Optional) main submodule. Put code here if you need it to be executed when
@@ -16,9 +12,8 @@
 
   (require racket/cmdline racket/contract
            raco/command-name
-           (submod ".." namespace)
            (submod "lang.rkt" server)
-           "namespace.rkt")
+           )
 
   (define where (box null))
   (define once? (box #f))
@@ -31,8 +26,5 @@
    #:args ()
    (define/contract paths (listof path-string?) (reverse (unbox where)))
    (with-handlers ((exn:break? void))
-     (define ns (make-base-empty-namespace))
-     (namespace-require/full lang (namespace-anchor->empty-namespace anchor) ns)
-     (parameterize ((current-namespace ns))
-       (map load paths)
-       (sync (handle-evt (make-server-thread (unbox once?)) void))))))
+     (map (lambda (p) (dynamic-require p #f)) paths)
+     (sync (handle-evt (make-server-thread (unbox once?)) void)))))

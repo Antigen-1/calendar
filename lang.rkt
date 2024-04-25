@@ -3,10 +3,10 @@
          syntax/parse/define
          racket/runtime-path racket/date racket/draw racket/contract racket/dict
          "filter.rkt" "notify.rkt")
-(provide begin lambda define #%top-interaction #%app
-         (rename-out (my-quote quote)
-                     (my-datum #%datum))
-         disjoin conjoin
+(provide (all-from-out racket/base)
+         (rename-out (#%filter _filter)
+                     (#%operator _operator)
+                     (#%unit _unit))
          (contract-out (send!
                         (->* ((-> date? boolean?) string?)
                              (#:body (or/c string? #f)
@@ -51,16 +51,27 @@
     #:description "Real literal"
     (pattern v:str)
     (pattern v:boolean)
-    (pattern v:number)))
+    (pattern v:number))
+  (define-splicing-syntax-class complex-filter
+    #:description "Complex filter"
+    (pattern (~seq first op rest:complex-filter))))
 
-;; New interposition points
-(define-syntax-parser my-quote
+;; Expander for the $ dsl
+(define-syntax-parser #%filter
+  ((_ ft:complex-filter)
+   #'(ft.op ft.first (#%filter . ft.rest)))
+  ((_ ft)
+   #'ft))
+(define-syntax-parser #%unit
+  ((_ v:str)
+   #'((compose1 date-filter->predicate string->date-filter) v))
   ((_ v:id)
-   #'(date-filter->predicate (symbol->date-filter 'v)))
-  ((_ v:literal)
-   #'(quote v)))
-(define-syntax-parse-rule (my-datum . v)
-  (my-quote v))
+   #'v))
+(define-syntax-parser #%operator
+  ((_ (~datum OR))
+   #'disjoin)
+  ((_ (~datum AND))
+   #'conjoin))
 
 ;; Notifiers
 #; (->* (#:summary string?)
