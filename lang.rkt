@@ -53,13 +53,13 @@
     (pattern v:str)
     (pattern v:boolean)
     (pattern v:number))
-  (define-splicing-syntax-class complex-filter
+  (define-syntax-class complex-filter
     #:description "Complex filter"
-    (pattern (~seq first op rest:complex-filter))))
+    (pattern (first op . rest))))
 
 ;; Expander for the $ dsl
 (define-syntax-parser #%filter
-  ((_ ft:complex-filter)
+  ((_ . ft:complex-filter)
    #'(ft.op ft.first (#%filter . ft.rest)))
   ((_ ft)
    #'ft))
