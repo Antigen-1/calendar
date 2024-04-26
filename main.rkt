@@ -12,7 +12,7 @@
   (require racket/cmdline racket/contract
            raco/command-name
            (submod "lang.rkt" server)
-           )
+           libnotify)
 
   (define where (box null))
   (define once? (box #f))
@@ -25,5 +25,6 @@
    #:args ()
    (define/contract paths (listof path-string?) (reverse (unbox where)))
    (with-handlers ((exn:break? void))
+     (init-libnotify "Racket Calendar")
      (map (lambda (p) (dynamic-require (list 'file p) #f)) paths)
      (make-server (unbox once?)))))
