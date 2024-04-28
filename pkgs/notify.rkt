@@ -17,14 +17,14 @@
         (->* (#:summary string?)
              (#:body (or/c string? #f)
               #:timeout (or/c #f (>=/c 0))
-              #:urgency (or/c "low" "normal" "critical")
+              #:urgency (or/c 'low 'normal 'critical)
               #:category (or/c string? #f))
              any))
 (define ((make-notifier #:icon (icon #f))
          #:summary summary
          #:body (body #f)
          #:timeout (timeout #f)
-         #:urgency (urgency "normal")
+         #:urgency (urgency 'normal)
          #:category (category #f)
          )
   (send
@@ -33,7 +33,7 @@
                 body
                 icon
                 timeout
-                (string->symbol urgency)
+                urgency
                 category)
    show))
 
@@ -52,7 +52,7 @@
 #; (->* (#:summary string?)
         (#:body (or/c string? #f)
          #:timeout (or/c #f (>=/c 0))
-         #:urgency (or/c "low" "normal" "critical")
+         #:urgency (or/c 'low 'normal 'critical)
          #:category (or/c string? #f))
         any)
 (define notifier (make-notifier #:icon icon))
