@@ -1,14 +1,41 @@
 #lang racket/base
-(require racket/exn racket/draw racket/dict racket/date
+(require racket/exn racket/draw racket/dict racket/date racket/class
          racket/runtime-path
+         libnotify
          (for-syntax racket/base)
-         "../notify.rkt" "../pkg.rkt")
+         "../pkg.rkt")
 (provide install)
 
 ;; Server
 ;;------------------------------------------
 ;; Runtime Resources
 (define-runtime-path svg (build-path 'up "resource" "racket-logo.jpeg"))
+
+;; Create a notifier with an icon
+#; (->* ()
+        (#:icon (or/c #f path-string? (is-a?/c bitmap%)))
+        (->* (#:summary string?)
+             (#:body (or/c string? #f)
+              #:timeout (or/c #f (>=/c 0))
+              #:urgency (or/c "low" "normal" "critical")
+              #:category (or/c string? #f))
+             any))
+(define ((make-notifier #:icon (icon #f))
+         #:summary summary
+         #:body (body #f)
+         #:timeout (timeout #f)
+         #:urgency (urgency "normal")
+         #:category (category #f)
+         )
+  (send
+   (make-object notification%
+                summary
+                body
+                icon
+                timeout
+                (string->symbol urgency)
+                category)
+   show))
 
 ;; Apply the notifier to the record and date
 #; (-> <Notifier> record/c date? any)
