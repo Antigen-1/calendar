@@ -11,15 +11,16 @@
 
   (require racket/cmdline racket/contract
            raco/command-name
-           (submod "lang.rkt" server)
+           "pkg.rkt" "record.rkt"
+           (prefix-in notify: "pkgs/notify.rkt")
            libnotify)
 
   (define where (box null))
-  (define once? (box #f))
+  (define mode (box "notify-loop"))
   (command-line
    #:program (short-program+command-name)
    #:once-each
-   [("-o" "--once") "Run the script once" (set-box! once? #t)]
+   [("-o" "--once") "Run the script once" (set-box! mode "notify-once")]
    #:multi
    [("-p" "--path") path "Specify the script" (set-box! where (cons path (unbox where)))]
    #:args ()
@@ -27,4 +28,7 @@
    (with-handlers ((exn:break? void))
      (init-libnotify "Racket Calendar")
      (map (lambda (p) (dynamic-require (list 'file p) #f)) paths)
-     (make-server (unbox once?)))))
+
+     (notify:install)
+
+     ((get (unbox mode)) (get-records)))))
