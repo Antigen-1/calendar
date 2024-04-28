@@ -2,7 +2,7 @@
 (require (for-syntax racket/base)
          syntax/parse/define
          racket/date
-         "filter.rkt" "readtable.rkt" "pkg.rkt")
+         "filter.rkt" "readtable.rkt" "record.rkt")
 (provide (all-from-out racket/base)
          (rename-out (#%filter _filter)
                      (#%unit _unit)
