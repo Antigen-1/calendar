@@ -12,11 +12,6 @@
 
 ;; Syntax classes
 (begin-for-syntax
-  (define-syntax-class literal
-    #:description "Real literal"
-    (pattern v:str)
-    (pattern v:boolean)
-    (pattern v:number))
   (define-syntax-class complex-filter
     #:description "Complex filter"
     #:datum-literals (_operator1 _operator2)
