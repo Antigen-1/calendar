@@ -27,3 +27,9 @@
      (lambda ()
        (reverse (thread-cell-ref cell))))))
 ;;------------------------------------------
+
+(module+ test
+  (require rackunit)
+  (thread-wait (thread (lambda () (add-record! date? "a") (check-equal? (get-records) (list (list date? "a" #f #f 'normal #f))))))
+  (add-record! date? "b")
+  (check-equal? (get-records) (list (list date? "b" #f #f 'normal #f))))
