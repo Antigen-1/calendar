@@ -14,21 +14,22 @@
 (define-lex-abbrev expr-prefix #\@)
 (define-lex-abbrev expr-number (+ (/ #\0 #\9)))
 (define-lex-abbrev expr-mode (or "wd" "yd" "y" "m" "w" "d"))
-(define-lex-abbrev operator2 (or #\& #\|))
-(define-lex-abbrev operator1 #\!)
+(define-lex-abbrev operator (or #\& #\| #\!))
 (define-lex-abbrev end #\;)
-(define-lex-abbrev delimiter (or operator2 end operator1))
+(define-lex-abbrev delimiter (or end operator))
 (define-lex-abbrev id (seq (~ expr-prefix delimiter) (* (~ delimiter))))
+
+;; Operator table
+(define table (hasheq '& 'AND '\| 'OR '! 'NOT))
 
 #; (-> input-port? token?)
 (define get-token
   (lexer
-   (operator2
+   (operator
     (let ((symbol (string->symbol lexeme)))
-      (make-token 'OP2 (if (eq? symbol '&) 'AND 'OR) lexeme-srcloc)))
+      (make-token 'OP (hash-ref table symbol) lexeme-srcloc)))
    ((concatenation expr-prefix expr-number expr-mode)
     (make-token 'EXP (substring lexeme 1) lexeme-srcloc))
-   (operator1 (make-token 'OP1 'NOT lexeme-srcloc))
    (id
     (make-token 'ID (string->symbol lexeme) lexeme-srcloc))
    (end (void))))
@@ -39,7 +40,7 @@
 (module+ test
   (require rackunit)
   (define proc (tokenize (open-input-string "!@4m|ab@cd;")))
-  (check-equal? (token-struct-type (proc)) 'OP1)
+  (check-equal? (token-struct-type (proc)) 'OP)
   (check-equal? (token-struct-val (proc)) "4m")
   (check-equal? (token-struct-val (proc)) 'OR)
   (check-equal? (token-struct-val (proc)) 'ab@cd)

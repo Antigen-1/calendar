@@ -10,19 +10,43 @@
          $-readtable
          )
 
+;; Compile-time operator table
+(begin-for-syntax
+  ;; Lookup and check
+  #; (-> symbol? exact-integer? syntax? any)
+  (define (operator-identifier/check-arity op a stx)
+    (define table (hasheq 'AND (cons #'filter-conjoin 2)
+                          'NOT (cons #'filter-negate 1)
+                          'OR (cons #'filter-disjoin 2)))
+    (define (raise-not-found)
+      (raise-syntax-error #f "Operator not found." stx))
+    (define (operator-identifier op)
+      (car (hash-ref table op raise-not-found)))
+    (define (operator-arity op)
+      (cdr (hash-ref table op raise-not-found)))
+
+    (let ((arity (operator-arity op))
+          (id (operator-identifier op)))
+      (if (= a arity)
+          id
+          (raise-syntax-error
+           #f
+           (format "Mismatched arity:\n\tExpected: ~a;\n\tGiven: ~a." arity a)
+           stx)))))
+
 ;; Syntax classes
 (begin-for-syntax
   (define-syntax-class complex-filter
     #:description "Complex filter"
-    #:datum-literals (_operator1 _operator2)
+    #:datum-literals (_operator)
     ;; All operators are of the same precedence
     ;; All operators are right-associative
-    (pattern (first (_operator2 op) . rest)
-             #:with filter #'((#%operator op) first (#%filter . rest)))
-    (pattern ((_operator1 op) ft ...)
-             #:with filter #'((#%operator op) (#%filter ft ...)))))
+    (pattern (first (_operator op:id) . rest)
+             #:with filter #`(#,(operator-identifier/check-arity (syntax->datum #'op) 2 #'op) first (#%filter . rest)))
+    (pattern ((_operator op:id) ft ...)
+             #:with filter #`(#,(operator-identifier/check-arity (syntax->datum #'op) 1 #'op) (#%filter ft ...)))))
 
-;; Expander for the $ dsl
+;; Expander for the $ DSL
 (define-syntax-parser #%filter
   ((_ . ft:complex-filter)
    #'ft.filter)
@@ -33,30 +57,23 @@
    #'((compose1 date-filter->predicate string->date-filter) v))
   ((_ v:id)
    #'v))
-(define-syntax-parser #%operator
-  ((_ (~datum OR))
-   #'filter-disjoin)
-  ((_ (~datum AND))
-   #'filter-conjoin)
-  ((_ (~datum NOT))
-   #'filter-negate))
 
 (module+ test
   (require rackunit)
   (define pred1 (#%unit "0wd"))
   (define pred2 (#%unit pred1))
   (define pred (#%filter pred2
-                         (_operator2 OR)
+                         (_operator OR)
                          (#%unit "1wd")
-                         (_operator2 OR)
+                         (_operator OR)
                          (#%unit "2wd")
-                         (_operator2 OR)
+                         (_operator OR)
                          (#%unit "3wd")
-                         (_operator2 OR)
+                         (_operator OR)
                          (#%unit "4wd")
-                         (_operator2 OR)
+                         (_operator OR)
                          (#%unit "5wd")
-                         (_operator2 OR)
+                         (_operator OR)
                          (#%unit "6wd")))
   (check-true (pred (current-date)))
-  (check-false ((#%filter pred (_operator2 AND) (_operator1 NOT) pred) (current-date))))
+  (check-false ((#%filter pred (_operator AND) (_operator NOT) pred) (current-date))))
