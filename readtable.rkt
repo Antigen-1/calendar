@@ -31,9 +31,9 @@
                             #f
                             (_filter (_primitive "4m"))
                             #f
-                            (_filter (_application (_operator OR)
+                            (_filter (_application (_operator \|)
                                                    #f
-                                                   (_filter (_application (_operator AND)
+                                                   (_filter (_application (_operator &)
                                                                           #f
                                                                           (_filter (_primitive "5m"))
                                                                           #f

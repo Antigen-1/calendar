@@ -23,15 +23,11 @@
 (define-lex-abbrev delimiter (or end operator left-paren right-paren separator escape))
 (define-lex-abbrev id (seq (~ expr-prefix delimiter) (* (~ delimiter))))
 
-;; Operator table
-(define table (hasheq '& 'AND '\| 'OR '! 'NOT))
-
 #; (-> input-port? token?)
 (define get-token
   (lexer
    (operator
-    (let ((symbol (string->symbol lexeme)))
-      (make-token 'OP (hash-ref table symbol) lexeme-srcloc)))
+    (make-token 'OP (string->symbol lexeme) lexeme-srcloc))
    ((concatenation expr-prefix expr-number expr-mode)
     (make-token 'EXP (substring lexeme 1) lexeme-srcloc))
    (left-paren (make-token 'LP #f lexeme-srcloc))
@@ -51,7 +47,7 @@
   (define proc (tokenize (open-input-string "!@4m|ab@cd(),`a`;")))
   (check-equal? (token-struct-type (proc)) 'OP)
   (check-equal? (token-struct-val (proc)) "4m")
-  (check-equal? (token-struct-val (proc)) 'OR)
+  (check-equal? (token-struct-val (proc)) '\|)
   (check-equal? (token-struct-val (proc)) 'ab@cd)
   (check-equal? (token-struct-type (proc)) 'LP)
   (check-equal? (token-struct-type (proc)) 'RP)
