@@ -25,9 +25,25 @@
   (require rackunit)
   (check-equal?
    (parameterize ((current-readtable $-readtable))
-     (read (open-input-string "$!@4m|!!abcd;")))
-   '(_filter (_operator NOT) (_unit "4m") (_operator OR) (_operator NOT) (_operator NOT) (_unit abcd)))
-  (let ((port (open-input-string "abcd$@4m|abcd;")))
+     (read (open-input-string "$`a`(@4m,|(&(@5m,e),d));")))
+   '(_script
+     (_filter (_application (_operator a)
+                            #f
+                            (_filter (_primitive "4m"))
+                            #f
+                            (_filter (_application (_operator OR)
+                                                   #f
+                                                   (_filter (_application (_operator AND)
+                                                                          #f
+                                                                          (_filter (_primitive "5m"))
+                                                                          #f
+                                                                          (_filter (_primitive e))
+                                                                          #f))
+                                                   #f
+                                                   (_filter (_primitive d))
+                                                   #f))
+                            #f))))
+  (let ((port (open-input-string "abcd$@4m;")))
     (parameterize ((current-readtable $-readtable))
       (read-string 4 port)
       (define stx (read-syntax 'port port))

@@ -1,7 +1,7 @@
 #lang hasket
 (require racket/match racket/string racket/contract "function.rkt")
-(provide (contract-out (date-filter->predicate (-> date-filter? (-> date? any)))
-                       (string->date-filter (-> string? any))
+(provide (contract-out (erase-date (-> date? any))
+                       (make-date-filter-predicate (-> string? (-> date? any)))
                        (rename disjoin filter-disjoin filter-conbinator/c)
                        (rename conjoin filter-conjoin filter-conbinator/c)
                        (rename negate filter-negate filter-mapper/c))
@@ -14,6 +14,11 @@
   (month (number (integer-in 1 12)))
   (day (number (integer-in 1 31)))
   )
+
+;; Erase unecessary fields
+#; (-> date? date?)
+(define (erase-date dt)
+  (struct-copy date dt (second 0) (minute 0) (hour 0) (dst? #f) (time-zone-offset 0)))
 
 ;; Map date filter structures to predicates
 #; (-> date-filter? (-> date? boolean?))
@@ -47,17 +52,22 @@
                        str)
                (current-continuation-marks))))))
 
+;; Composed predicate constructor
+#; (-> string? (-> date? boolean?))
+(define (make-date-filter-predicate str)
+  (date-filter->predicate (string->date-filter str)))
+
 ;; Contracts
-(define filter-conbinator/c (-> (-> date? boolean?) (-> date? boolean?) any))
+(define filter-conbinator/c (->* () () #:rest (listof (-> date? boolean?)) any))
 (define filter-mapper/c (-> (-> date? boolean?) any))
 
 ;; Filter combinators
 #; filter-conbinator/c
-(define (disjoin p1 p2)
-  (disjoin1 p1 p2))
+(define (disjoin . ps)
+  (apply disjoin1 ps))
 #; filter-conbinator/c
-(define (conjoin p1 p2)
-  (conjoin1 p1 p2))
+(define (conjoin . ps)
+  (apply conjoin1 ps))
 #; filter-mapper/c
 (define (negate p)
   (negate1 p))
@@ -72,17 +82,11 @@
   (check-exn exn:fail:contract? (lambda () (string->date-filter "w")))
   (check-true
    (let ((date (current-date)))
-     ((foldl
-       disjoin
-       (const1 #f)
-       (map (compose1 date-filter->predicate string->date-filter symbol->string)
-            (list '0wd '1wd '2wd '3wd '4wd '5wd '6wd)))
+     ((apply disjoin (map make-date-filter-predicate
+                          (list "0wd" "1wd" "2wd" "3wd" "4wd" "5wd" "6wd")))
       date)))
   (check-false
    (let ((date (current-date)))
-     ((foldl
-       conjoin
-       (const1 #t)
-       (map (compose1 date-filter->predicate string->date-filter symbol->string)
-            (list '1m '2m '3m '4m '5m '6m '7m '8m '9m '10m '11m '12m)))
+     ((apply conjoin (map make-date-filter-predicate
+                          (list "1m" "2m" "3m" "4m" "5m" "6m" "7m" "8m" "9m" "10m" "11m" "12m")))
       date))))

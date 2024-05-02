@@ -2,78 +2,78 @@
 (require (for-syntax racket/base)
          syntax/parse/define
          racket/date
-         "filter.rkt" "readtable.rkt" "record.rkt")
-(provide (all-from-out racket/base)
-         (rename-out (#%filter _filter)
-                     (#%unit _unit)
-                     (add-record! send!))
+         "date.rkt" "readtable.rkt" "record.rkt")
+(provide (all-from-out racket/base racket/date)
+         (rename-out (add-record! send!))
          $-readtable
-         )
+         _script
+         _filter
+         _application
+         _primitive
+         _operator)
 
-;; Compile-time operator table
+;; Expander
 (begin-for-syntax
-  ;; Lookup and check
-  #; (-> symbol? exact-integer? syntax? any)
-  (define (operator-identifier/check-arity op a stx)
-    (define table (hasheq 'AND (cons #'filter-conjoin 2)
-                          'NOT (cons #'filter-negate 1)
-                          'OR (cons #'filter-disjoin 2)))
-    (define (raise-not-found)
-      (raise-syntax-error #f "Operator not found." stx))
-    (define (operator-identifier op)
-      (car (hash-ref table op raise-not-found)))
-    (define (operator-arity op)
-      (cdr (hash-ref table op raise-not-found)))
-
-    (let ((arity (operator-arity op))
-          (id (operator-identifier op)))
-      (if (= a arity)
-          id
-          (raise-syntax-error
-           #f
-           (format "Mismatched arity:\n\tExpected: ~a;\n\tGiven: ~a." arity a)
-           stx)))))
-
-;; Syntax classes
-(begin-for-syntax
-  (define-syntax-class complex-filter
-    #:description "Complex filter"
-    #:datum-literals (_operator)
-    ;; All operators are of the same precedence
-    ;; All operators are right-associative
-    (pattern (first (_operator op:id) . rest)
-             #:with filter #`(#,(operator-identifier/check-arity (syntax->datum #'op) 2 #'op) first (#%filter . rest)))
-    (pattern ((_operator op:id) ft ...)
-             #:with filter #`(#,(operator-identifier/check-arity (syntax->datum #'op) 1 #'op) (#%filter ft ...)))))
-
-;; Expander for the $ DSL
-(define-syntax-parser #%filter
-  ((_ . ft:complex-filter)
-   #'ft.filter)
-  ((_ ft)
-   #'ft))
-(define-syntax-parser #%unit
-  ((_ v:str)
-   #'((compose1 date-filter->predicate string->date-filter) v))
-  ((_ v:id)
-   #'v))
+  (define-syntax-class operator
+    #:description "Operator"
+    (pattern (~datum &)
+             #:with real #'filter-conjoin)
+    (pattern (~datum \|)
+             #:with real #'filter-disjoin)
+    (pattern (~datum !)
+             #:with real #'filter-negate)
+    (pattern op:id
+             #:with real #'op))
+  (define-splicing-syntax-class rest-argument
+    (pattern (~seq #f arg)
+             #:with argument #'arg))
+  (define-splicing-syntax-class arguments
+    #:description "Operands"
+    (pattern (~seq)
+             #:with arguments #'())
+    (pattern (~seq arg rest:rest-argument ...)
+             #:with arguments #'(arg rest.argument ...))
+    ))
+(define-syntax (_script stx)
+  (syntax-parse stx
+    ((_ o)
+     #'(compose1 o erase-date))))
+(define-syntax (_filter stx)
+  (syntax-parse stx
+    ((_ o) #'o)))
+(define-syntax (_application stx)
+  (syntax-parse stx
+    ((_ op #f arguments:arguments #f)
+     #'(op . arguments.arguments))))
+(define-syntax (_primitive stx)
+  (syntax-parse stx
+    ((_ v:string)
+     #'(make-date-filter-predicate v))
+    ((_ v:id)
+     #'v)))
+(define-syntax (_operator stx)
+  (syntax-parse stx
+    ((_ op:operator)
+     #'op.real)))
 
 (module+ test
   (require rackunit)
-  (define pred1 (#%unit "0wd"))
-  (define pred2 (#%unit pred1))
-  (define pred (#%filter pred2
-                         (_operator OR)
-                         (#%unit "1wd")
-                         (_operator OR)
-                         (#%unit "2wd")
-                         (_operator OR)
-                         (#%unit "3wd")
-                         (_operator OR)
-                         (#%unit "4wd")
-                         (_operator OR)
-                         (#%unit "5wd")
-                         (_operator OR)
-                         (#%unit "6wd")))
-  (check-true (pred (current-date)))
-  (check-false ((#%filter pred (_operator AND) (_operator NOT) pred) (current-date))))
+  (define dt (current-date))
+  (define pred (_script
+                (_filter (_application (_operator &)
+                                       #f
+                                       (_primitive "0wd")
+                                       #f
+                                       (_primitive "1wd")
+                                       #f
+                                       (_primitive "2wd")
+                                       #f
+                                       (_primitive "3wd")
+                                       #f
+                                       (_primitive "4wd")
+                                       #f
+                                       (_primitive "5wd")
+                                       #f
+                                       (_primitive "6wd")
+                                       #f))))
+  (check-false (pred dt)))

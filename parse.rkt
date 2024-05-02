@@ -1,4 +1,6 @@
 #lang brag
-_filter : _operator* _unit (_operator+ _unit)*
-_unit : ID | EXP
-_operator : OP
+_script : _filter
+_filter : _application | _primitive
+_application : _operator LP [_filter (SP _filter)*] RP
+_primitive : ID | EXP
+_operator : OP | MOP
